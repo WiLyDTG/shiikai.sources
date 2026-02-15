@@ -81,6 +81,7 @@ async function fetchSources(episodeId) {
             const allServers = [...(videos.SUB || []), ...(videos.LAT || [])];
             const sources = [];
             
+            // Primero intentar YourUpload con proxy
             for (const server of allServers) {
                 if (server.title === "YourUpload" && server.code) {
                     try {
@@ -90,7 +91,7 @@ async function fetchSources(episodeId) {
                         if (fileMatch && !fileMatch[1].includes("novideo")) {
                             const proxyUrl = PROXY + "?url=" + encodeURIComponent(fileMatch[1]) + "&referer=" + encodeURIComponent("https://www.yourupload.com/");
                             sources.push({
-                                label: "YourUpload (MP4)",
+                                label: "YourUpload",
                                 qualities: [{ quality: "720p", url: proxyUrl }]
                             });
                         }
@@ -98,35 +99,17 @@ async function fetchSources(episodeId) {
                 }
             }
             
+            // Agregar embeds como alternativas
+            const embedServers = ["MEGA", "Okru", "Maru", "Stape"];
             for (const server of allServers) {
-                if (server.title === "Netu" && server.code) {
-                    try {
-                        const netuRes = await fetch(server.code);
-                        const netuHtml = await netuRes.text();
-                        const m3u8Match = netuHtml.match(/src\s*:\s*['"]([^'"]+\.m3u8[^'"]*)['"]/i);
-                        if (m3u8Match) {
-                            const proxyUrl = PROXY + "?url=" + encodeURIComponent(m3u8Match[1]) + "&referer=" + encodeURIComponent(server.code);
-                            sources.push({
-                                label: "Netu (HLS)",
-                                qualities: [{ quality: "720p", url: proxyUrl }]
-                            });
-                        }
-                    } catch (e) {}
-                }
-            }
-            
-            if (sources.length > 0) {
-                return JSON.stringify(sources);
-            }
-            
-            for (const server of allServers) {
-                if (server.code) {
+                if (embedServers.includes(server.title) && server.code) {
                     sources.push({
-                        label: server.title || "Video",
+                        label: server.title,
                         qualities: [{ quality: "default", url: server.code }]
                     });
                 }
             }
+            
             if (sources.length > 0) {
                 return JSON.stringify(sources);
             }
