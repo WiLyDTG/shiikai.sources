@@ -64,6 +64,7 @@ async function fetchSources(episodeId) {
         if (match) {
             const videos = JSON.parse(match[1]);
             const allServers = [...(videos.SUB || []), ...(videos.LAT || [])];
+            const sources = [];
             
             // YourUpload - extrae MP4 directo
             for (const server of allServers) {
@@ -71,19 +72,40 @@ async function fetchSources(episodeId) {
                     try {
                         const yuRes = await fetch(server.code);
                         const yuHtml = await yuRes.text();
-                        const fileMatch = yuHtml.match(/file\s*:\s*['"]([^'"]+)['"]/i);
-                        if (fileMatch) {
-                            return JSON.stringify([{
-                                label: "YourUpload",
+                        const fileMatch = yuHtml.match(/file\s*:\s*['"]([^'"]+\.mp4[^'"]*)['"]/i);
+                        if (fileMatch && !fileMatch[1].includes("novideo")) {
+                            sources.push({
+                                label: "YourUpload (MP4)",
                                 qualities: [{ quality: "720p", url: fileMatch[1] }]
-                            }]);
+                            });
                         }
                     } catch (e) {}
                 }
             }
             
-            // Devolver todos los servidores como embeds
-            const sources = [];
+            // Netu/HQQ - extrae M3U8
+            for (const server of allServers) {
+                if (server.title === "Netu" && server.code) {
+                    try {
+                        const netuRes = await fetch(server.code);
+                        const netuHtml = await netuRes.text();
+                        const m3u8Match = netuHtml.match(/src\s*:\s*['"]([^'"]+\.m3u8[^'"]*)['"]/i);
+                        if (m3u8Match) {
+                            sources.push({
+                                label: "Netu (HLS)",
+                                qualities: [{ quality: "720p", url: m3u8Match[1] }]
+                            });
+                        }
+                    } catch (e) {}
+                }
+            }
+            
+            // Si encontramos fuentes directas, devolverlas
+            if (sources.length > 0) {
+                return JSON.stringify(sources);
+            }
+            
+            // Fallback: devolver embeds
             for (const server of allServers) {
                 if (server.code) {
                     sources.push({
