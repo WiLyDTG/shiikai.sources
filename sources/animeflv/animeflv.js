@@ -74,7 +74,12 @@ async function fetchSources(episodeId) {
                         if (fileMatch) {
                             return JSON.stringify([{
                                 label: "YourUpload",
-                                qualities: [{ quality: "default", url: fileMatch[1] }]
+                                headers: { "Referer": "https://www.yourupload.com/" },
+                                qualities: [{ 
+                                    quality: "default", 
+                                    url: fileMatch[1],
+                                    headers: { "Referer": "https://www.yourupload.com/" }
+                                }]
                             }]);
                         }
                     } catch (e) {}
