@@ -9,9 +9,10 @@
         let match;
         while ((match = regex.exec(html)) !== null) {
             results.push({
+                id: match[1].trim(),
                 title: match[3].trim(),
                 image: "https://m.animeflv.net" + match[2].trim(),
-                href: "https://m.animeflv.net" + match[1].trim()
+                url: "https://m.animeflv.net" + match[1].trim()
             });
         }
         
@@ -50,7 +51,7 @@ async function fetchEpisodes(url) {
         while ((match = regex.exec(html)) !== null) {
             const numberMatch = match[2].match(/(\d+)$/);
             results.push({
-                href: "https://m.animeflv.net" + match[1].trim(),
+                id: "https://m.animeflv.net" + match[1].trim(),
                 number: numberMatch ? parseInt(numberMatch[1], 10) : results.length + 1
             });
         }
