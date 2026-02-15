@@ -1,34 +1,84 @@
 async function search(query) {
-    return JSON.stringify([{
-        id: "test-1",
-        title: "Naruto Test",
-        image: "https://m.animeflv.net/uploads/animes/covers/2.jpg",
-        url: "https://m.animeflv.net/anime/naruto"
-    }]);
+    try {
+        const response = await fetch("https://m.animeflv.net/browse?q=" + encodeURIComponent(query));
+        const html = await response.text();
+        const results = [];
+        const regex = /<li class="Anime">\s*<a href="([^"]+)"[^>]*>[\s\S]*?<img src="([^"]+)"[\s\S]*?<h2 class="Title">([^<]+)<\/h2>/g;
+        let match;
+        while ((match = regex.exec(html)) !== null) {
+            results.push({
+                id: match[1].trim(),
+                title: match[3].trim(),
+                image: "https://m.animeflv.net" + match[2].trim(),
+                url: "https://m.animeflv.net" + match[1].trim()
+            });
+        }
+        return JSON.stringify(results);
+    } catch (e) {
+        return JSON.stringify([]);
+    }
 }
 
 async function fetchInfo(url) {
-    return JSON.stringify([{
-        description: "Test description",
-        airdate: "2002"
-    }]);
+    try {
+        const response = await fetch(url);
+        const html = await response.text();
+        const match = html.match(/<strong>Sinopsis:<\/strong>\s*([\s\S]*?)<\/p>/);
+        return JSON.stringify([{
+            description: match ? match[1].trim() : "Sin descripcion",
+            airdate: "N/A"
+        }]);
+    } catch (e) {
+        return JSON.stringify([{ description: "Error", airdate: "N/A" }]);
+    }
 }
 
 async function fetchEpisodes(id, page) {
-    return JSON.stringify([
-        { id: "ep-1", number: 1 },
-        { id: "ep-2", number: 2 }
-    ]);
+    try {
+        const url = id.startsWith("http") ? id : "https://m.animeflv.net" + id;
+        const response = await fetch(url);
+        const html = await response.text();
+        const results = [];
+        const regex = /<li class="Episode"><a href="([^"]+)">([^<]+)<\/a><\/li>/g;
+        let match;
+        while ((match = regex.exec(html)) !== null) {
+            const num = match[2].match(/(\d+)$/);
+            results.push({
+                id: "https://m.animeflv.net" + match[1].trim(),
+                number: num ? parseInt(num[1], 10) : results.length + 1
+            });
+        }
+        return JSON.stringify(results);
+    } catch (e) {
+        return JSON.stringify([]);
+    }
 }
 
 async function fetchSources(episodeId) {
-    return JSON.stringify([{
-        label: "Test",
-        qualities: [{
-            quality: "default",
-            url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
-        }]
-    }]);
+    try {
+        const url = episodeId.startsWith("http") ? episodeId : "https://m.animeflv.net" + episodeId;
+        const response = await fetch(url);
+        const html = await response.text();
+        const match = html.match(/var videos\s*=\s*(\{[\s\S]*?\});/);
+        if (match) {
+            const videos = JSON.parse(match[1]);
+            if (videos.SUB && videos.SUB[0] && videos.SUB[0].code) {
+                return JSON.stringify([{
+                    label: videos.SUB[0].title || "SUB",
+                    qualities: [{ quality: "default", url: videos.SUB[0].code }]
+                }]);
+            }
+            if (videos.LAT && videos.LAT[0] && videos.LAT[0].code) {
+                return JSON.stringify([{
+                    label: videos.LAT[0].title || "LAT",
+                    qualities: [{ quality: "default", url: videos.LAT[0].code }]
+                }]);
+            }
+        }
+        return JSON.stringify([]);
+    } catch (e) {
+        return JSON.stringify([]);
+    }
 }
 
 return { search, fetchInfo, fetchEpisodes, fetchSources };
