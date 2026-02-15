@@ -114,7 +114,10 @@ async function extractStreamUrl(url) {
 
         const videosMatch = html.match(/var videos\s*=\s*(\{[\s\S]*?\});/);
         if (!videosMatch) {
-            return null;
+            return JSON.stringify({
+                streams: [],
+                subtitles: ""
+            });
         }
 
         const videosJson = JSON.parse(videosMatch[1]);
@@ -144,10 +147,6 @@ async function extractStreamUrl(url) {
             }
         }
 
-        if (streams.length === 0) {
-            return null;
-        }
-
         // Retornar en formato compatible con Mojuru
         return JSON.stringify({
             streams: streams,
@@ -156,7 +155,10 @@ async function extractStreamUrl(url) {
 
     } catch (err) {
         console.error(err);
-        return null;
+        return JSON.stringify({
+            streams: [],
+            subtitles: ""
+        });
     }
 }
 
