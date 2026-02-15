@@ -1,17 +1,19 @@
 {
-  "sourceName": "AnimeFLV",
+  "name": "AnimeFLV",
+  "compatible": true,
+  "pluginType": "provider",
+  "pluginProvider": "Standard",
+  "contentProvider": "AnimeFLV",
+  "scriptUrl": "https://raw.githubusercontent.com/WiLyDTG/shiikai.sources/main/sources/animeflv/animeflv.js?v=21",
   "iconUrl": "https://www3.animeflv.net/favicon.ico",
   "author": {
     "name": "WiLyD",
     "icon": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ3122kQwublLkZ6rf1fEpUP79BxZOFmH9BSA&s"
   },
-  "version": "20.0.0",
+  "version": "21.0.0",
   "language": "Spanish",
   "streamType": "MP4",
   "quality": "720p",
   "baseUrl": "https://m.animeflv.net/",
-  "scriptUrl": "https://raw.githubusercontent.com/WiLyDTG/shiikai.sources/main/sources/animeflv/animeflv.js?v=20",
-  "type": "anime",
-  "asyncJS": true,
-  "supportsMojuru": true
+  "type": "anime"
 }
