@@ -7,8 +7,9 @@ export async function onRequest(context) {
     return new Response(null, {
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
         'Access-Control-Allow-Headers': '*',
+        'Access-Control-Expose-Headers': '*',
       },
     });
   }
@@ -24,16 +25,27 @@ export async function onRequest(context) {
   }
 
   try {
+    // Build headers including Range if present
+    const fetchHeaders = {
+      'Referer': referer,
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'Origin': new URL(referer).origin,
+    };
+    
+    // Pass Range header for video streaming
+    const rangeHeader = request.headers.get('Range');
+    if (rangeHeader) {
+      fetchHeaders['Range'] = rangeHeader;
+    }
+
     const response = await fetch(videoUrl, {
-      headers: {
-        'Referer': referer,
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Origin': new URL(referer).origin,
-      },
+      method: request.method,
+      headers: fetchHeaders,
     });
 
     const newHeaders = new Headers(response.headers);
     newHeaders.set('Access-Control-Allow-Origin', '*');
+    newHeaders.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
     newHeaders.delete('Content-Security-Policy');
     newHeaders.delete('X-Frame-Options');
 
