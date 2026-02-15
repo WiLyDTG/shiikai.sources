@@ -9,22 +9,26 @@ async function searchResults(keyword) {
         let match;
 
         while ((match = animeRegex.exec(html)) !== null) {
+            const href = match[1].trim();
             results.push({
                 title: decodeHtmlEntities(match[3].trim()),
                 image: "https://m.animeflv.net" + match[2].trim(),
-                href: match[1].trim()
+                href: href,
+                id: href,
+                url: "https://m.animeflv.net" + href
             });
         }
 
         return JSON.stringify(results);
     } catch (err) {
         console.error(err);
-        return JSON.stringify([{
-            title: "Error",
-            image: "Error",
-            href: "Error"
-        }]);
+        return JSON.stringify([]);
     }
+}
+
+// Alias para StandardClientAdapter
+async function search(keyword) {
+    return searchResults(keyword);
 }
 
 async function extractDetails(url) {
@@ -69,9 +73,11 @@ async function extractEpisodes(url) {
             const titleText = match[2].trim();
             const numberMatch = titleText.match(/(\d+)$/);
             const episodeNumber = numberMatch ? parseInt(numberMatch[1], 10) : results.length + 1;
+            const href = match[1].trim();
 
             results.push({
-                href: match[1].trim(),
+                href: href,
+                id: href,
                 number: episodeNumber
             });
         }
@@ -79,8 +85,13 @@ async function extractEpisodes(url) {
         return JSON.stringify(results);
     } catch (err) {
         console.error(err);
-        return JSON.stringify([{ href: "Error", number: "Error" }]);
+        return JSON.stringify([]);
     }
+}
+
+// Alias para StandardClientAdapter
+async function fetchEpisodes(url, page) {
+    return extractEpisodes(url);
 }
 
 async function extractStreamUrl(url) {
@@ -95,43 +106,51 @@ async function extractStreamUrl(url) {
         }
 
         const videosJson = JSON.parse(videosMatch[1]);
+        const streams = [];
         
-        // Buscar StreamWish primero (SUB)
+        // Procesar SUB
         if (videosJson.SUB && Array.isArray(videosJson.SUB)) {
-            const sw = videosJson.SUB.find(s => s.server === "sw");
-            if (sw && sw.code) {
-                console.log("StreamWish SUB: " + sw.code);
-                return sw.code;
-            }
-            // Si no hay StreamWish, usar el primero disponible
-            const first = videosJson.SUB.find(s => s.code && s.allow_mobile);
-            if (first && first.code) {
-                console.log("First SUB: " + first.code);
-                return first.code;
+            for (const server of videosJson.SUB) {
+                if (server.code && server.allow_mobile) {
+                    streams.push({
+                        title: "SUB - " + server.title,
+                        streamUrl: server.code
+                    });
+                }
             }
         }
 
-        // Buscar en LAT si no hay SUB
+        // Procesar LAT
         if (videosJson.LAT && Array.isArray(videosJson.LAT)) {
-            const sw = videosJson.LAT.find(s => s.server === "sw");
-            if (sw && sw.code) {
-                console.log("StreamWish LAT: " + sw.code);
-                return sw.code;
-            }
-            const first = videosJson.LAT.find(s => s.code && s.allow_mobile);
-            if (first && first.code) {
-                console.log("First LAT: " + first.code);
-                return first.code;
+            for (const server of videosJson.LAT) {
+                if (server.code && server.allow_mobile) {
+                    streams.push({
+                        title: "LAT - " + server.title,
+                        streamUrl: server.code
+                    });
+                }
             }
         }
 
-        console.log("No stream URL found");
-        return null;
+        if (streams.length === 0) {
+            return null;
+        }
+
+        // Retornar en formato compatible con Mojuru
+        return JSON.stringify({
+            streams: streams,
+            subtitles: ""
+        });
 
     } catch (err) {
         console.error(err);
         return null;
     }
+}
+
+// Alias para StandardClientAdapter
+async function fetchSources(episodeId) {
+    return extractStreamUrl(episodeId);
 }
 
 function decodeHtmlEntities(text) {

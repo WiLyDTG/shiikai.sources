@@ -1,5 +1,10 @@
 {
+  "name": "AnimeFLV",
   "sourceName": "AnimeFLV",
+  "compatible": true,
+  "pluginType": "provider",
+  "pluginProvider": "Standard",
+  "contentProvider": "AnimeFLV",
   "iconUrl": "https://www3.animeflv.net/favicon.ico",
   "author": {
     "name": "WiLyD",
