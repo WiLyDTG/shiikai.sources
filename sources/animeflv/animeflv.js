@@ -64,30 +64,20 @@ async function fetchSources(episodeId) {
         if (match) {
             const videos = JSON.parse(match[1]);
             const allServers = [...(videos.SUB || []), ...(videos.LAT || [])];
+            const sources = [];
             
-            // YourUpload - extrae MP4 directo (sin headers, probamos si funciona)
+            // Agregar todos los servidores como opciones
             for (const server of allServers) {
-                if (server.title === "YourUpload" && server.code) {
-                    try {
-                        const yuRes = await fetch(server.code);
-                        const yuHtml = await yuRes.text();
-                        const fileMatch = yuHtml.match(/file\s*:\s*['"]([^'"]+)['"]/i);
-                        if (fileMatch) {
-                            return JSON.stringify([{
-                                label: "YourUpload",
-                                qualities: [{ quality: "720p", url: fileMatch[1] }]
-                            }]);
-                        }
-                    } catch (e) {}
+                if (server.code) {
+                    sources.push({
+                        label: server.title || "Video",
+                        qualities: [{ quality: "default", url: server.code }]
+                    });
                 }
             }
             
-            // Fallback: primer servidor
-            if (allServers[0] && allServers[0].code) {
-                return JSON.stringify([{
-                    label: allServers[0].title || "Video",
-                    qualities: [{ quality: "default", url: allServers[0].code }]
-                }]);
+            if (sources.length > 0) {
+                return JSON.stringify(sources);
             }
         }
         return JSON.stringify([]);
