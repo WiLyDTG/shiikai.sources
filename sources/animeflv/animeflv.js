@@ -70,7 +70,24 @@ async function fetchSources(url) {
         if (match) {
             const videos = JSON.parse(match[1]);
             
-            // Devolver el primer enlace disponible
+            // Buscar YourUpload que tiene URLs directas
+            const allServers = [...(videos.SUB || []), ...(videos.LAT || [])];
+            
+            for (const server of allServers) {
+                if (server.title === "YourUpload" && server.code) {
+                    // Extraer URL directa de YourUpload
+                    const yuRes = await fetch(server.code, {
+                        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+                    });
+                    const yuHtml = await yuRes.text();
+                    const fileMatch = yuHtml.match(/file\s*:\s*["']([^"']+)["']/i);
+                    if (fileMatch) {
+                        return fileMatch[1];
+                    }
+                }
+            }
+            
+            // Fallback: devolver el primer embed disponible
             if (videos.SUB && videos.SUB[0] && videos.SUB[0].code) {
                 return videos.SUB[0].code;
             }
