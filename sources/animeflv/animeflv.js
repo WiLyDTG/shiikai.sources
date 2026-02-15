@@ -74,32 +74,16 @@ async function extractStreamUrl(url) {
                         const yuHtml = await yuRes.text();
                         const fileMatch = yuHtml.match(/file\s*:\s*['"]([^'"]+)['"]/i);
                         if (fileMatch) {
-                            return JSON.stringify({
-                                streams: [{
-                                    title: "YourUpload",
-                                    streamUrl: fileMatch[1],
-                                    headers: {
-                                        "Referer": "https://www.yourupload.com/",
-                                        "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36"
-                                    }
-                                }],
-                                subtitles: ""
-                            });
+                            // Devolver solo la URL como string
+                            return fileMatch[1];
                         }
                     } catch (e) {}
                 }
             }
             
-            // Fallback - devolver embed
+            // Fallback - devolver primer embed
             if (allServers[0] && allServers[0].code) {
-                return JSON.stringify({
-                    streams: [{
-                        title: allServers[0].title || "Video",
-                        streamUrl: allServers[0].code,
-                        headers: {}
-                    }],
-                    subtitles: ""
-                });
+                return allServers[0].code;
             }
         }
         return "https://error.org/";
