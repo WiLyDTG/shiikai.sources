@@ -97,47 +97,26 @@ async function extractStreamUrl(url) {
         }
 
         const videosJson = JSON.parse(videosMatch[1]);
-        const streams = [];
         
-        const headers = {
-            "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36",
-            "Referer": "https://animeflv.net/"
-        };
-
-        // Procesar SUB
+        // Buscar el primer servidor disponible (preferir SUB)
         if (videosJson.SUB && Array.isArray(videosJson.SUB)) {
             for (const server of videosJson.SUB) {
                 if (server.code && server.allow_mobile) {
-                    streams.push({
-                        title: "SUB - " + server.title,
-                        streamUrl: server.code,
-                        headers: headers
-                    });
+                    return server.code;
                 }
             }
         }
 
-        // Procesar LAT
+        // Si no hay SUB, buscar LAT
         if (videosJson.LAT && Array.isArray(videosJson.LAT)) {
             for (const server of videosJson.LAT) {
                 if (server.code && server.allow_mobile) {
-                    streams.push({
-                        title: "LAT - " + server.title,
-                        streamUrl: server.code,
-                        headers: headers
-                    });
+                    return server.code;
                 }
             }
         }
 
-        if (streams.length === 0) {
-            return "https://error.org/";
-        }
-
-        return JSON.stringify({
-            streams: streams,
-            subtitles: ""
-        });
+        return "https://error.org/";
 
     } catch (err) {
         console.error(err);
