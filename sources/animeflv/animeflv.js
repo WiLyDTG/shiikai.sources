@@ -1,16 +1,15 @@
-async function search(query) {
+async function searchResults(keyword) {
     try {
-        const response = await fetch("https://m.animeflv.net/browse?q=" + encodeURIComponent(query));
+        const response = await fetch("https://m.animeflv.net/browse?q=" + encodeURIComponent(keyword));
         const html = await response.text();
         const results = [];
         const regex = /<li class="Anime">\s*<a href="([^"]+)"[^>]*>[\s\S]*?<img src="([^"]+)"[\s\S]*?<h2 class="Title">([^<]+)<\/h2>/g;
         let match;
         while ((match = regex.exec(html)) !== null) {
             results.push({
-                id: match[1].trim(),
                 title: match[3].trim(),
                 image: "https://m.animeflv.net" + match[2].trim(),
-                url: "https://m.animeflv.net" + match[1].trim()
+                href: match[1].trim()
             });
         }
         return JSON.stringify(results);
@@ -19,24 +18,26 @@ async function search(query) {
     }
 }
 
-async function fetchInfo(url) {
+async function extractDetails(url) {
     try {
-        const response = await fetch(url);
+        const fullUrl = url.startsWith("http") ? url : "https://m.animeflv.net" + url;
+        const response = await fetch(fullUrl);
         const html = await response.text();
         const match = html.match(/<strong>Sinopsis:<\/strong>\s*([\s\S]*?)<\/p>/);
         return JSON.stringify([{
             description: match ? match[1].trim() : "Sin descripcion",
+            aliases: "N/A",
             airdate: "N/A"
         }]);
     } catch (e) {
-        return JSON.stringify([{ description: "Error", airdate: "N/A" }]);
+        return JSON.stringify([{ description: "Error", aliases: "N/A", airdate: "N/A" }]);
     }
 }
 
-async function fetchEpisodes(id, page) {
+async function extractEpisodes(url) {
     try {
-        const url = id.startsWith("http") ? id : "https://m.animeflv.net" + id;
-        const response = await fetch(url);
+        const fullUrl = url.startsWith("http") ? url : "https://m.animeflv.net" + url;
+        const response = await fetch(fullUrl);
         const html = await response.text();
         const results = [];
         const regex = /<li class="Episode"><a href="([^"]+)">([^<]+)<\/a><\/li>/g;
@@ -44,7 +45,7 @@ async function fetchEpisodes(id, page) {
         while ((match = regex.exec(html)) !== null) {
             const num = match[2].match(/(\d+)$/);
             results.push({
-                id: "https://m.animeflv.net" + match[1].trim(),
+                href: "https://m.animeflv.net" + match[1].trim(),
                 number: num ? parseInt(num[1], 10) : results.length + 1
             });
         }
@@ -54,17 +55,18 @@ async function fetchEpisodes(id, page) {
     }
 }
 
-async function fetchSources(episodeId) {
+async function extractStreamUrl(url) {
     try {
-        const url = episodeId.startsWith("http") ? episodeId : "https://m.animeflv.net" + episodeId;
-        const response = await fetch(url);
+        const fullUrl = url.startsWith("http") ? url : "https://m.animeflv.net" + url;
+        const response = await fetch(fullUrl);
         const html = await response.text();
         const match = html.match(/var videos\s*=\s*(\{[\s\S]*?\});/);
+        
         if (match) {
             const videos = JSON.parse(match[1]);
             const allServers = [...(videos.SUB || []), ...(videos.LAT || [])];
             
-            // YourUpload - funciona y devuelve MP4 directo
+            // YourUpload - extrae MP4 directo
             for (const server of allServers) {
                 if (server.title === "YourUpload" && server.code) {
                     try {
@@ -72,32 +74,36 @@ async function fetchSources(episodeId) {
                         const yuHtml = await yuRes.text();
                         const fileMatch = yuHtml.match(/file\s*:\s*['"]([^'"]+)['"]/i);
                         if (fileMatch) {
-                            return JSON.stringify([{
-                                label: "YourUpload",
-                                headers: { "Referer": "https://www.yourupload.com/" },
-                                qualities: [{ 
-                                    quality: "default", 
-                                    url: fileMatch[1],
-                                    headers: { "Referer": "https://www.yourupload.com/" }
-                                }]
-                            }]);
+                            return JSON.stringify({
+                                streams: [{
+                                    title: "YourUpload",
+                                    streamUrl: fileMatch[1],
+                                    headers: {
+                                        "Referer": "https://www.yourupload.com/",
+                                        "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36"
+                                    }
+                                }],
+                                subtitles: ""
+                            });
                         }
                     } catch (e) {}
                 }
             }
             
-            // Fallback: devolver embed URL
+            // Fallback
             if (allServers[0] && allServers[0].code) {
-                return JSON.stringify([{
-                    label: allServers[0].title || "Video",
-                    qualities: [{ quality: "default", url: allServers[0].code }]
-                }]);
+                return JSON.stringify({
+                    streams: [{
+                        title: allServers[0].title || "Video",
+                        streamUrl: allServers[0].code,
+                        headers: {}
+                    }],
+                    subtitles: ""
+                });
             }
         }
-        return JSON.stringify([]);
+        return "https://error.org/";
     } catch (e) {
-        return JSON.stringify([]);
+        return "https://error.org/";
     }
 }
-
-return { search, fetchInfo, fetchEpisodes, fetchSources };
