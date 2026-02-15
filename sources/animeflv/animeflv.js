@@ -106,6 +106,101 @@ async function fetchEpisodes(url, page) {
     return extractEpisodes(url);
 }
 
+// Extraer URL directa de Streamwish
+async function extractStreamwish(embedUrl) {
+    try {
+        const headers = {
+            "Referer": "https://animeflv.net/",
+            "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36"
+        };
+        const response = await fetchv2(embedUrl, headers);
+        const html = await response.text();
+        
+        // Buscar URL m3u8 en el HTML
+        const m3u8Match = html.match(/file:\s*["']([^"']+\.m3u8[^"']*)/i) ||
+                          html.match(/source:\s*["']([^"']+\.m3u8[^"']*)/i) ||
+                          html.match(/["']([^"']+master\.m3u8[^"']*)/i);
+        
+        if (m3u8Match) {
+            return {
+                url: m3u8Match[1],
+                headers: headers
+            };
+        }
+        return null;
+    } catch (e) {
+        return null;
+    }
+}
+
+// Extraer URL directa de OK.ru
+async function extractOkru(embedUrl) {
+    try {
+        const headers = {
+            "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36"
+        };
+        const response = await fetchv2(embedUrl, headers);
+        const html = await response.text();
+        
+        // Buscar data-options con videos
+        const optionsMatch = html.match(/data-options="([^"]+)"/);
+        if (optionsMatch) {
+            const decoded = optionsMatch[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+            try {
+                const options = JSON.parse(decoded);
+                const videos = options.flashvars?.metadata?.videos;
+                if (videos && videos.length > 0) {
+                    // Obtener la mejor calidad
+                    const best = videos.reduce((a, b) => 
+                        (parseInt(b.name) > parseInt(a.name)) ? b : a
+                    );
+                    return {
+                        url: best.url,
+                        headers: {}
+                    };
+                }
+            } catch (e) {}
+        }
+        
+        // Fallback: buscar URL directa
+        const urlMatch = html.match(/["'](https?:\/\/[^"']+\.mp4[^"']*)/i);
+        if (urlMatch) {
+            return {
+                url: urlMatch[1],
+                headers: {}
+            };
+        }
+        return null;
+    } catch (e) {
+        return null;
+    }
+}
+
+// Extraer URL directa de Streamtape
+async function extractStreamtape(embedUrl) {
+    try {
+        const headers = {
+            "Referer": "https://animeflv.net/",
+            "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36"
+        };
+        const response = await fetchv2(embedUrl, headers);
+        const html = await response.text();
+        
+        // Streamtape usa un truco con innerHTML
+        const tokenMatch = html.match(/innerHTML\s*=\s*["'][^"']*\/\/([^"']+)/);
+        if (tokenMatch) {
+            const videoUrl = "https://" + tokenMatch[1];
+            return {
+                url: videoUrl,
+                headers: headers
+            };
+        }
+        return null;
+    } catch (e) {
+        return null;
+    }
+}
+
 async function extractStreamUrl(url) {
     try {
         const fullUrl = url.startsWith("http") ? url : "https://m.animeflv.net" + url;
@@ -123,31 +218,60 @@ async function extractStreamUrl(url) {
         const videosJson = JSON.parse(videosMatch[1]);
         const streams = [];
         
+        // Función para procesar cada servidor
+        async function processServer(server, prefix) {
+            if (!server.code || !server.allow_mobile) return null;
+            
+            const embedUrl = server.code;
+            const title = prefix + " - " + server.title;
+            let directUrl = null;
+            let headers = {};
+            
+            // Intentar extraer URL directa según el servidor
+            if (embedUrl.includes("streamwish") || embedUrl.includes("wishembed")) {
+                const result = await extractStreamwish(embedUrl);
+                if (result) {
+                    directUrl = result.url;
+                    headers = result.headers;
+                }
+            } else if (embedUrl.includes("ok.ru")) {
+                const result = await extractOkru(embedUrl);
+                if (result) {
+                    directUrl = result.url;
+                    headers = result.headers;
+                }
+            } else if (embedUrl.includes("streamtape")) {
+                const result = await extractStreamtape(embedUrl);
+                if (result) {
+                    directUrl = result.url;
+                    headers = result.headers;
+                }
+            }
+            
+            // Si no se pudo extraer URL directa, usar embed
+            return {
+                title: title,
+                streamUrl: directUrl || embedUrl,
+                headers: Object.keys(headers).length > 0 ? headers : undefined
+            };
+        }
+        
         // Procesar SUB
         if (videosJson.SUB && Array.isArray(videosJson.SUB)) {
             for (const server of videosJson.SUB) {
-                if (server.code && server.allow_mobile) {
-                    streams.push({
-                        title: "SUB - " + server.title,
-                        streamUrl: server.code
-                    });
-                }
+                const stream = await processServer(server, "SUB");
+                if (stream) streams.push(stream);
             }
         }
 
         // Procesar LAT
         if (videosJson.LAT && Array.isArray(videosJson.LAT)) {
             for (const server of videosJson.LAT) {
-                if (server.code && server.allow_mobile) {
-                    streams.push({
-                        title: "LAT - " + server.title,
-                        streamUrl: server.code
-                    });
-                }
+                const stream = await processServer(server, "LAT");
+                if (stream) streams.push(stream);
             }
         }
 
-        // Retornar en formato compatible con Mojuru
         return JSON.stringify({
             streams: streams,
             subtitles: ""
