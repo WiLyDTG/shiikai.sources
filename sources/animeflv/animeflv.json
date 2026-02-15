@@ -5,5 +5,5 @@
   "pluginProvider": "Standard",
   "contentProvider": "AnimeFLV",
   "scriptUrl": "https://raw.githubusercontent.com/WiLyDTG/shiikai.sources/main/sources/animeflv/animeflv.js",
-  "version": "3.0.1"
+  "version": "4.0.0"
 }
