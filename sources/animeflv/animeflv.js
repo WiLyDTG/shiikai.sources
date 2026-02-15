@@ -1,7 +1,7 @@
-﻿async function search(query) {
+﻿async function searchResults(keyword) {
     const results = [];
     try {
-        const response = await fetch("https://m.animeflv.net/browse?q=" + encodeURIComponent(query));
+        const response = await fetchv2("https://m.animeflv.net/browse?q=" + encodeURIComponent(keyword));
         const html = await response.text();
         
         const regex = /<li class="Anime">\s*<a href="([^"]+)">\s*<figure class="Image"><img src="([^"]+)"[^>]*>[\s\S]*?<\/figure>\s*<h2 class="Title">([^<]+)<\/h2>/g;
@@ -21,9 +21,9 @@
     }
 }
 
-async function fetchInfo(url) {
+async function extractDetails(url) {
     try {
-        const response = await fetch(url);
+        const response = await fetchv2(url);
         const html = await response.text();
 
         const match = html.match(/<strong>Sinopsis:<\/strong>\s*([\s\S]*?)<\/p>/);
@@ -31,17 +31,18 @@ async function fetchInfo(url) {
 
         return JSON.stringify([{
             description: description,
+            aliases: "N/A",
             airdate: "N/A"
         }]);
     } catch (err) {
-        return JSON.stringify([{ description: "Error", airdate: "N/A" }]);
+        return JSON.stringify([{ description: "Error", aliases: "N/A", airdate: "N/A" }]);
     }
 }
 
-async function fetchEpisodes(url) {
+async function extractEpisodes(url) {
     const results = [];
     try {
-        const response = await fetch(url);
+        const response = await fetchv2(url);
         const html = await response.text();
 
         const regex = /<li class="Episode"><a href="([^"]+)">([^<]+)<\/a><\/li>/g;
@@ -61,9 +62,9 @@ async function fetchEpisodes(url) {
     }
 }
 
-async function fetchSources(url) {
+async function extractStreamUrl(url) {
     try {
-        const response = await fetch(url);
+        const response = await fetchv2(url);
         const html = await response.text();
 
         const match = html.match(/var videos\s*=\s*(\{[\s\S]*?\});/);
@@ -76,59 +77,26 @@ async function fetchSources(url) {
             for (const server of allServers) {
                 if (server.title === "YourUpload" && server.code) {
                     // Extraer URL directa de YourUpload
-                    const yuRes = await fetch(server.code, {
-                        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
-                    });
+                    const yuRes = await fetchv2(server.code);
                     const yuHtml = await yuRes.text();
                     const fileMatch = yuHtml.match(/file\s*:\s*["']([^"']+)["']/i);
                     if (fileMatch) {
-                        // Devolver con headers requeridos
-                        return JSON.stringify([{
-                            label: "YourUpload",
-                            type: "mp4",
-                            qualities: [{
-                                quality: "default",
-                                url: fileMatch[1],
-                                headers: {
-                                    "Referer": "https://www.yourupload.com/",
-                                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-                                }
-                            }]
-                        }]);
+                        return fileMatch[1];
                     }
                 }
             }
             
-            // Fallback: devolver el primer embed disponible
+            // Fallback: primer servidor disponible
             if (videos.SUB && videos.SUB[0] && videos.SUB[0].code) {
-                return JSON.stringify([{
-                    label: videos.SUB[0].title || "SUB",
-                    qualities: [{
-                        quality: "default",
-                        url: videos.SUB[0].code
-                    }]
-                }]);
+                return videos.SUB[0].code;
             }
             if (videos.LAT && videos.LAT[0] && videos.LAT[0].code) {
-                return JSON.stringify([{
-                    label: videos.LAT[0].title || "LAT",
-                    qualities: [{
-                        quality: "default",
-                        url: videos.LAT[0].code
-                    }]
-                }]);
+                return videos.LAT[0].code;
             }
         }
 
-        return JSON.stringify([]);
+        return "https://files.catbox.moe/avolvc.mp4";
     } catch (err) {
-        return JSON.stringify([]);
+        return "https://files.catbox.moe/avolvc.mp4";
     }
 }
-
-return {
-    search,
-    fetchInfo,
-    fetchEpisodes,
-    fetchSources
-};
