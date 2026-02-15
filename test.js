@@ -1,25 +1,28 @@
 (async () => {
-    // Test YourUpload extraction
-    const embedUrl = 'https://www.yourupload.com/embed/D1OgmRtniGT7';
-    const res = await fetch(embedUrl, {
-        headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-    });
-    const html = await res.text();
+    // Test if YourUpload URL is accessible
+    const videoUrl = 'https://vidcache.net:8161/a20260215sDn03151oQ0/video.mp4';
     
-    console.log('HTML length:', html.length);
+    try {
+        // Test HEAD request
+        const res = await fetch(videoUrl, {
+            method: 'HEAD',
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Referer': 'https://www.yourupload.com/'
+            }
+        });
+        console.log('Status:', res.status);
+        console.log('Content-Type:', res.headers.get('content-type'));
+        console.log('Content-Length:', res.headers.get('content-length'));
+    } catch (err) {
+        console.log('Error:', err.message);
+    }
     
-    // Buscar URLs de video
-    const mp4Match = html.match(/https?:\/\/[^"'\s<>]+\.mp4[^"'\s<>]*/gi);
-    const srcMatch = html.match(/file\s*:\s*["']([^"']+)["']/i);
-    const sourceMatch = html.match(/source\s+src=["']([^"']+)["']/i);
-    
-    console.log('MP4 URLs:', mp4Match);
-    console.log('File match:', srcMatch ? srcMatch[1] : 'not found');
-    console.log('Source match:', sourceMatch ? sourceMatch[1] : 'not found');
-    
-    // Buscar cualquier URL de video
-    const videoUrls = html.match(/https?:\/\/[^"'\s<>]+\.(mp4|m3u8|webm)[^"'\s<>]*/gi);
-    console.log('All video URLs:', videoUrls);
+    // Try without referer
+    try {
+        const res2 = await fetch(videoUrl, { method: 'HEAD' });
+        console.log('Without referer - Status:', res2.status);
+    } catch (err) {
+        console.log('Without referer - Error:', err.message);
+    }
 })();

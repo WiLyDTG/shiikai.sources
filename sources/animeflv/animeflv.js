@@ -82,23 +82,47 @@ async function fetchSources(url) {
                     const yuHtml = await yuRes.text();
                     const fileMatch = yuHtml.match(/file\s*:\s*["']([^"']+)["']/i);
                     if (fileMatch) {
-                        return fileMatch[1];
+                        // Devolver con headers requeridos
+                        return JSON.stringify([{
+                            label: "YourUpload",
+                            type: "mp4",
+                            qualities: [{
+                                quality: "default",
+                                url: fileMatch[1],
+                                headers: {
+                                    "Referer": "https://www.yourupload.com/",
+                                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                                }
+                            }]
+                        }]);
                     }
                 }
             }
             
             // Fallback: devolver el primer embed disponible
             if (videos.SUB && videos.SUB[0] && videos.SUB[0].code) {
-                return videos.SUB[0].code;
+                return JSON.stringify([{
+                    label: videos.SUB[0].title || "SUB",
+                    qualities: [{
+                        quality: "default",
+                        url: videos.SUB[0].code
+                    }]
+                }]);
             }
             if (videos.LAT && videos.LAT[0] && videos.LAT[0].code) {
-                return videos.LAT[0].code;
+                return JSON.stringify([{
+                    label: videos.LAT[0].title || "LAT",
+                    qualities: [{
+                        quality: "default",
+                        url: videos.LAT[0].code
+                    }]
+                }]);
             }
         }
 
-        return "";
+        return JSON.stringify([]);
     } catch (err) {
-        return "";
+        return JSON.stringify([]);
     }
 }
 
