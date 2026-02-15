@@ -4,13 +4,13 @@
   "pluginType": "provider",
   "pluginProvider": "Standard",
   "contentProvider": "AnimeFLV",
-  "scriptUrl": "https://raw.githubusercontent.com/WiLyDTG/shiikai.sources/main/sources/animeflv/animeflv.js?v=16",
+  "scriptUrl": "https://raw.githubusercontent.com/WiLyDTG/shiikai.sources/main/sources/animeflv/animeflv.js?v=18",
   "iconUrl": "https://www3.animeflv.net/favicon.ico",
   "author": {
     "name": "WiLyD",
     "icon": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ3122kQwublLkZ6rf1fEpUP79BxZOFmH9BSA&s"
   },
-  "version": "16.0.0",
+  "version": "18.0.0",
   "language": "Spanish",
   "streamType": "HLS",
   "quality": "1080p",

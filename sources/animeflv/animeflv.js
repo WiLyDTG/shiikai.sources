@@ -62,16 +62,30 @@ async function fetchSources(episodeId) {
         const match = html.match(/var videos\s*=\s*(\{[\s\S]*?\});/);
         if (match) {
             const videos = JSON.parse(match[1]);
-            if (videos.SUB && videos.SUB[0] && videos.SUB[0].code) {
-                return JSON.stringify([{
-                    label: videos.SUB[0].title || "SUB",
-                    qualities: [{ quality: "default", url: videos.SUB[0].code }]
-                }]);
+            const allServers = [...(videos.SUB || []), ...(videos.LAT || [])];
+            
+            // YourUpload - funciona y devuelve MP4 directo
+            for (const server of allServers) {
+                if (server.title === "YourUpload" && server.code) {
+                    try {
+                        const yuRes = await fetch(server.code);
+                        const yuHtml = await yuRes.text();
+                        const fileMatch = yuHtml.match(/file\s*:\s*['"]([^'"]+)['"]/i);
+                        if (fileMatch) {
+                            return JSON.stringify([{
+                                label: "YourUpload",
+                                qualities: [{ quality: "default", url: fileMatch[1] }]
+                            }]);
+                        }
+                    } catch (e) {}
+                }
             }
-            if (videos.LAT && videos.LAT[0] && videos.LAT[0].code) {
+            
+            // Fallback: devolver embed URL
+            if (allServers[0] && allServers[0].code) {
                 return JSON.stringify([{
-                    label: videos.LAT[0].title || "LAT",
-                    qualities: [{ quality: "default", url: videos.LAT[0].code }]
+                    label: allServers[0].title || "Video",
+                    qualities: [{ quality: "default", url: allServers[0].code }]
                 }]);
             }
         }
