@@ -1,3 +1,15 @@
+// Wrapper para compatibilidad
+async function fetchv2(url, headers = {}, method = "GET", body = null) {
+    const options = {
+        method: method,
+        headers: headers
+    };
+    if (body && method !== "GET" && method !== "HEAD") {
+        options.body = body;
+    }
+    return fetch(url, options);
+}
+
 async function searchResults(keyword) {
     const results = [];
 
