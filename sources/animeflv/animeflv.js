@@ -55,6 +55,8 @@ async function fetchEpisodes(id, page) {
 }
 
 async function fetchSources(episodeId) {
+    const PROXY = "https://shiikai-sources.pages.dev/proxy";
+    
     try {
         const url = episodeId.startsWith("http") ? episodeId : "https://m.animeflv.net" + episodeId;
         const response = await fetch(url);
@@ -66,7 +68,7 @@ async function fetchSources(episodeId) {
             const allServers = [...(videos.SUB || []), ...(videos.LAT || [])];
             const sources = [];
             
-            // YourUpload - extrae MP4 directo
+            // YourUpload - extrae MP4 directo con proxy
             for (const server of allServers) {
                 if (server.title === "YourUpload" && server.code) {
                     try {
@@ -74,16 +76,17 @@ async function fetchSources(episodeId) {
                         const yuHtml = await yuRes.text();
                         const fileMatch = yuHtml.match(/file\s*:\s*['"]([^'"]+\.mp4[^'"]*)['"]/i);
                         if (fileMatch && !fileMatch[1].includes("novideo")) {
+                            const proxyUrl = PROXY + "?url=" + encodeURIComponent(fileMatch[1]) + "&referer=" + encodeURIComponent("https://www.yourupload.com/");
                             sources.push({
                                 label: "YourUpload (MP4)",
-                                qualities: [{ quality: "720p", url: fileMatch[1] }]
+                                qualities: [{ quality: "720p", url: proxyUrl }]
                             });
                         }
                     } catch (e) {}
                 }
             }
             
-            // Netu/HQQ - extrae M3U8
+            // Netu/HQQ - extrae M3U8 con proxy
             for (const server of allServers) {
                 if (server.title === "Netu" && server.code) {
                     try {
@@ -91,9 +94,10 @@ async function fetchSources(episodeId) {
                         const netuHtml = await netuRes.text();
                         const m3u8Match = netuHtml.match(/src\s*:\s*['"]([^'"]+\.m3u8[^'"]*)['"]/i);
                         if (m3u8Match) {
+                            const proxyUrl = PROXY + "?url=" + encodeURIComponent(m3u8Match[1]) + "&referer=" + encodeURIComponent(server.code);
                             sources.push({
                                 label: "Netu (HLS)",
-                                qualities: [{ quality: "720p", url: m3u8Match[1] }]
+                                qualities: [{ quality: "720p", url: proxyUrl }]
                             });
                         }
                     } catch (e) {}
