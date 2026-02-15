@@ -1,4 +1,4 @@
-﻿async function searchResults(keyword) {
+async function searchResults(keyword) {
     const results = [];
 
     try {
@@ -9,11 +9,10 @@
         let match;
 
         while ((match = animeRegex.exec(html)) !== null) {
-            const href = match[1].trim();
             results.push({
                 title: decodeHtmlEntities(match[3].trim()),
                 image: "https://m.animeflv.net" + match[2].trim(),
-                href: href
+                href: match[1].trim()
             });
         }
 
@@ -30,8 +29,7 @@
 
 async function extractDetails(url) {
     try {
-        const fullUrl = url.startsWith("http") ? url : "https://m.animeflv.net" + url;
-        const response = await fetchv2(fullUrl);
+        const response = await fetchv2("https://m.animeflv.net" + url);
         const html = await response.text();
 
         const synopsisMatch = html.match(/<strong>Sinopsis:<\/strong>\s*([\s\S]*?)<\/p>/);
@@ -59,8 +57,7 @@ async function extractDetails(url) {
 async function extractEpisodes(url) {
     const results = [];
     try {
-        const fullUrl = url.startsWith("http") ? url : "https://m.animeflv.net" + url;
-        const response = await fetchv2(fullUrl);
+        const response = await fetchv2("https://m.animeflv.net" + url);
         const html = await response.text();
 
         const episodeRegex = /<li class="Episode"><a href="([^"]+)">([^<]+)<\/a><\/li>/g;
@@ -70,10 +67,9 @@ async function extractEpisodes(url) {
             const titleText = match[2].trim();
             const numberMatch = titleText.match(/(\d+)$/);
             const episodeNumber = numberMatch ? parseInt(numberMatch[1], 10) : results.length + 1;
-            const href = match[1].trim();
 
             results.push({
-                href: href,
+                href: match[1].trim(),
                 number: episodeNumber
             });
         }
@@ -87,8 +83,7 @@ async function extractEpisodes(url) {
 
 async function extractStreamUrl(url) {
     try {
-        const fullUrl = url.startsWith("http") ? url : "https://m.animeflv.net" + url;
-        const response = await fetchv2(fullUrl);
+        const response = await fetchv2("https://m.animeflv.net" + url);
         const html = await response.text();
 
         const videosMatch = html.match(/var videos\s*=\s*(\{[\s\S]*?\});/);
@@ -97,26 +92,50 @@ async function extractStreamUrl(url) {
         }
 
         const videosJson = JSON.parse(videosMatch[1]);
+        const streams = [];
         
-        // Buscar el primer servidor disponible (preferir SUB)
+        const defaultHeaders = {
+            "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36",
+            "Referer": "https://m.animeflv.net/"
+        };
+
         if (videosJson.SUB && Array.isArray(videosJson.SUB)) {
             for (const server of videosJson.SUB) {
                 if (server.code && server.allow_mobile) {
-                    return server.code;
+                    streams.push({
+                        title: "SUB - " + server.title,
+                        streamUrl: server.code,
+                        headers: defaultHeaders
+                    });
                 }
             }
         }
 
-        // Si no hay SUB, buscar LAT
         if (videosJson.LAT && Array.isArray(videosJson.LAT)) {
             for (const server of videosJson.LAT) {
                 if (server.code && server.allow_mobile) {
-                    return server.code;
+                    streams.push({
+                        title: "LAT - " + server.title,
+                        streamUrl: server.code,
+                        headers: defaultHeaders
+                    });
                 }
             }
         }
 
-        return "https://error.org/";
+        if (streams.length === 0) {
+            return "https://error.org/";
+        }
+
+        console.log(JSON.stringify({
+            streams: streams,
+            subtitles: ""
+        }));
+        
+        return JSON.stringify({
+            streams: streams,
+            subtitles: ""
+        });
 
     } catch (err) {
         console.error(err);
@@ -136,11 +155,11 @@ function decodeHtmlEntities(text) {
         .replace(/&lt;/g, '<')
         .replace(/&gt;/g, '>')
         .replace(/&nbsp;/g, ' ')
-        .replace(/&oacute;/g, 'o')
-        .replace(/&aacute;/g, 'a')
-        .replace(/&eacute;/g, 'e')
-        .replace(/&iacute;/g, 'i')
-        .replace(/&uacute;/g, 'u')
-        .replace(/&ntilde;/g, 'n')
-        .replace(/&Ntilde;/g, 'N');
+        .replace(/&oacute;/g, 'ó')
+        .replace(/&aacute;/g, 'á')
+        .replace(/&eacute;/g, 'é')
+        .replace(/&iacute;/g, 'í')
+        .replace(/&uacute;/g, 'ú')
+        .replace(/&ntilde;/g, 'ñ')
+        .replace(/&Ntilde;/g, 'Ñ');
 }
