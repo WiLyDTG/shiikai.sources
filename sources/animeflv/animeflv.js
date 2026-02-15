@@ -19,7 +19,6 @@
 
         return JSON.stringify(results);
     } catch (err) {
-        console.error(err);
         return JSON.stringify([{
             title: "Error",
             image: "Error",
@@ -80,7 +79,6 @@ async function extractEpisodes(url) {
 
         return JSON.stringify(results);
     } catch (err) {
-        console.error(err);
         return JSON.stringify([{ href: "Error", number: "Error" }]);
     }
 }
@@ -119,7 +117,6 @@ async function extractStreamUrl(url) {
         return "https://error.org/";
 
     } catch (err) {
-        console.error(err);
         return "https://error.org/";
     }
 }

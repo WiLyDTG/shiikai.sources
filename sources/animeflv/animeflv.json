@@ -16,7 +16,6 @@
   "asyncJS": true,
   "softsub": true,
   "downloadSupport": false,
-  "note": "Use external player.",
   "supportsMojuru": true,
   "supportsSora": true,
   "supportsLuna": true
