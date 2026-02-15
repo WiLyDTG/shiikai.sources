@@ -1,146 +1,134 @@
-﻿async function searchResults(keyword) {
+﻿async function search(query) {
     const results = [];
-
     try {
-        const response = await fetchv2("https://m.animeflv.net/browse?q=" + encodeURIComponent(keyword));
+        const response = await fetch("https://m.animeflv.net/browse?q=" + encodeURIComponent(query));
         const html = await response.text();
+        
+        const regex = /<li class="Anime">\s*<a href="([^"]+)">\s*<figure class="Image"><img src="([^"]+)"[^>]*>[\s\S]*?<\/figure>\s*<h2 class="Title">([^<]+)<\/h2>/g;
 
-        const animeRegex = /<li class="Anime">\s*<a href="([^"]+)">\s*<figure class="Image"><img src="([^"]+)"[^>]*>[\s\S]*?<\/figure>\s*<h2 class="Title">([^<]+)<\/h2>/g;
         let match;
-
-        while ((match = animeRegex.exec(html)) !== null) {
-            const href = match[1].trim();
+        while ((match = regex.exec(html)) !== null) {
             results.push({
-                title: decodeHtmlEntities(match[3].trim()),
+                title: match[3].trim(),
                 image: "https://m.animeflv.net" + match[2].trim(),
-                href: href
+                href: "https://m.animeflv.net" + match[1].trim()
             });
         }
-
+        
         return JSON.stringify(results);
     } catch (err) {
-        console.error(err);
-        return JSON.stringify([{
-            title: "Error",
-            image: "Error",
-            href: "Error"
-        }]);
+        return JSON.stringify([]);
     }
 }
 
-async function extractDetails(url) {
+async function fetchInfo(url) {
     try {
-        const fullUrl = url.startsWith("http") ? url : "https://m.animeflv.net" + url;
-        const response = await fetchv2(fullUrl);
+        const response = await fetch(url);
         const html = await response.text();
 
-        const synopsisMatch = html.match(/<strong>Sinopsis:<\/strong>\s*([\s\S]*?)<\/p>/);
-        const description = synopsisMatch ? decodeHtmlEntities(synopsisMatch[1].trim()) : "N/A";
-
-        const statusMatch = html.match(/<strong>Estado:<\/strong>\s*<strong[^>]*>([^<]+)<\/strong>/);
-        const status = statusMatch ? statusMatch[1].trim() : "N/A";
+        const match = html.match(/<strong>Sinopsis:<\/strong>\s*([\s\S]*?)<\/p>/);
+        const description = match ? match[1].trim() : "Sin descripcion";
 
         return JSON.stringify([{
             description: description,
-            aliases: "N/A",
-            airdate: status
+            airdate: "N/A"
         }]);
-
     } catch (err) {
-        console.error(err);
-        return JSON.stringify([{
-            description: "Error",
-            aliases: "Error",
-            airdate: "Error"
-        }]);
+        return JSON.stringify([{ description: "Error", airdate: "N/A" }]);
     }
 }
 
-async function extractEpisodes(url) {
+async function fetchEpisodes(url) {
     const results = [];
     try {
-        const fullUrl = url.startsWith("http") ? url : "https://m.animeflv.net" + url;
-        const response = await fetchv2(fullUrl);
+        const response = await fetch(url);
         const html = await response.text();
 
-        const episodeRegex = /<li class="Episode"><a href="([^"]+)">([^<]+)<\/a><\/li>/g;
+        const regex = /<li class="Episode"><a href="([^"]+)">([^<]+)<\/a><\/li>/g;
         let match;
 
-        while ((match = episodeRegex.exec(html)) !== null) {
-            const titleText = match[2].trim();
-            const numberMatch = titleText.match(/(\d+)$/);
-            const episodeNumber = numberMatch ? parseInt(numberMatch[1], 10) : results.length + 1;
-            const href = match[1].trim();
-
+        while ((match = regex.exec(html)) !== null) {
+            const numberMatch = match[2].match(/(\d+)$/);
             results.push({
-                href: href,
-                number: episodeNumber
+                href: "https://m.animeflv.net" + match[1].trim(),
+                number: numberMatch ? parseInt(numberMatch[1], 10) : results.length + 1
             });
         }
 
         return JSON.stringify(results);
     } catch (err) {
-        console.error(err);
-        return JSON.stringify([{ href: "Error", number: "Error" }]);
+        return JSON.stringify([]);
     }
 }
 
-async function extractStreamUrl(url) {
+async function fetchSources(url) {
     try {
-        const fullUrl = url.startsWith("http") ? url : "https://m.animeflv.net" + url;
-        const response = await fetchv2(fullUrl);
+        const response = await fetch(url);
         const html = await response.text();
 
-        const videosMatch = html.match(/var videos\s*=\s*(\{[\s\S]*?\});/);
-        if (!videosMatch) {
-            return "https://error.org/";
-        }
-
-        const videosJson = JSON.parse(videosMatch[1]);
-        
-        // Buscar el primer servidor disponible (preferir SUB)
-        if (videosJson.SUB && Array.isArray(videosJson.SUB)) {
-            for (const server of videosJson.SUB) {
-                if (server.code && server.allow_mobile) {
-                    return server.code;
+        const match = html.match(/var videos\s*=\s*(\{[\s\S]*?\});/);
+        if (match) {
+            const videos = JSON.parse(match[1]);
+            
+            // Buscar YourUpload que tiene URLs directas
+            const allServers = [...(videos.SUB || []), ...(videos.LAT || [])];
+            
+            for (const server of allServers) {
+                if (server.title === "YourUpload" && server.code) {
+                    // Extraer URL directa de YourUpload
+                    const yuRes = await fetch(server.code, {
+                        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+                    });
+                    const yuHtml = await yuRes.text();
+                    const fileMatch = yuHtml.match(/file\s*:\s*["']([^"']+)["']/i);
+                    if (fileMatch) {
+                        // Devolver con headers requeridos
+                        return JSON.stringify([{
+                            label: "YourUpload",
+                            type: "mp4",
+                            qualities: [{
+                                quality: "default",
+                                url: fileMatch[1],
+                                headers: {
+                                    "Referer": "https://www.yourupload.com/",
+                                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                                }
+                            }]
+                        }]);
+                    }
                 }
+            }
+            
+            // Fallback: devolver el primer embed disponible
+            if (videos.SUB && videos.SUB[0] && videos.SUB[0].code) {
+                return JSON.stringify([{
+                    label: videos.SUB[0].title || "SUB",
+                    qualities: [{
+                        quality: "default",
+                        url: videos.SUB[0].code
+                    }]
+                }]);
+            }
+            if (videos.LAT && videos.LAT[0] && videos.LAT[0].code) {
+                return JSON.stringify([{
+                    label: videos.LAT[0].title || "LAT",
+                    qualities: [{
+                        quality: "default",
+                        url: videos.LAT[0].code
+                    }]
+                }]);
             }
         }
 
-        // Si no hay SUB, buscar LAT
-        if (videosJson.LAT && Array.isArray(videosJson.LAT)) {
-            for (const server of videosJson.LAT) {
-                if (server.code && server.allow_mobile) {
-                    return server.code;
-                }
-            }
-        }
-
-        return "https://error.org/";
-
+        return JSON.stringify([]);
     } catch (err) {
-        console.error(err);
-        return "https://error.org/";
+        return JSON.stringify([]);
     }
 }
 
-function decodeHtmlEntities(text) {
-    if (!text) {
-        return "";
-    }
-    return text
-        .replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec))
-        .replace(/&#x([0-9a-fA-F]+);/g, (match, hex) => String.fromCharCode(parseInt(hex, 16)))
-        .replace(/&quot;/g, '"')
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&oacute;/g, 'o')
-        .replace(/&aacute;/g, 'a')
-        .replace(/&eacute;/g, 'e')
-        .replace(/&iacute;/g, 'i')
-        .replace(/&uacute;/g, 'u')
-        .replace(/&ntilde;/g, 'n')
-        .replace(/&Ntilde;/g, 'N');
-}
+return {
+    search,
+    fetchInfo,
+    fetchEpisodes,
+    fetchSources
+};
