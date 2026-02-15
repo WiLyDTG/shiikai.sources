@@ -1,5 +1,10 @@
 {
-  "sourceName": "AnimeFLV",
+  "name": "AnimeFLV",
+  "compatible": true,
+  "pluginType": "provider",
+  "pluginProvider": "Standard",
+  "contentProvider": "AnimeFLV",
+  "scriptUrl": "https://raw.githubusercontent.com/WiLyDTG/shiikai.sources/main/sources/animeflv/animeflv.js",
   "iconUrl": "https://www3.animeflv.net/favicon.ico",
   "author": {
     "name": "WiLyD",
@@ -10,13 +15,5 @@
   "streamType": "MP4",
   "quality": "720p",
   "baseUrl": "https://m.animeflv.net/",
-  "searchBaseUrl": "https://m.animeflv.net/browse?q=%s",
-  "scriptUrl": "https://raw.githubusercontent.com/WiLyDTG/shiikai.sources/main/sources/animeflv/animeflv.js",
-  "type": "anime",
-  "asyncJS": true,
-  "softsub": false,
-  "downloadSupport": false,
-  "supportsMojuru": true,
-  "supportsSora": true,
-  "supportsLuna": true
+  "type": "anime"
 }
