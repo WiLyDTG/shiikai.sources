@@ -1,7 +1,9 @@
 {
   "name": "AnimeFLV",
+  "compatible": true,
   "pluginType": "provider",
   "pluginProvider": "Standard",
+  "contentProvider": "AnimeFLV",
   "scriptUrl": "https://raw.githubusercontent.com/WiLyDTG/shiikai.sources/main/sources/animeflv/animeflv.js",
-  "version": "3.0.0"
+  "version": "3.0.1"
 }
