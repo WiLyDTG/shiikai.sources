@@ -29,7 +29,8 @@ async function searchResults(keyword) {
 
 async function extractDetails(url) {
     try {
-        const response = await fetchv2("https://m.animeflv.net" + url);
+        const fullUrl = url.startsWith("http") ? url : "https://m.animeflv.net" + url;
+        const response = await fetchv2(fullUrl);
         const html = await response.text();
 
         const synopsisMatch = html.match(/<strong>Sinopsis:<\/strong>\s*([\s\S]*?)<\/p>/);
@@ -57,7 +58,8 @@ async function extractDetails(url) {
 async function extractEpisodes(url) {
     const results = [];
     try {
-        const response = await fetchv2("https://m.animeflv.net" + url);
+        const fullUrl = url.startsWith("http") ? url : "https://m.animeflv.net" + url;
+        const response = await fetchv2(fullUrl);
         const html = await response.text();
 
         const episodeRegex = /<li class="Episode"><a href="([^"]+)">([^<]+)<\/a><\/li>/g;
@@ -83,63 +85,52 @@ async function extractEpisodes(url) {
 
 async function extractStreamUrl(url) {
     try {
-        const response = await fetchv2("https://m.animeflv.net" + url);
+        const fullUrl = url.startsWith("http") ? url : "https://m.animeflv.net" + url;
+        const response = await fetchv2(fullUrl);
         const html = await response.text();
 
         const videosMatch = html.match(/var videos\s*=\s*(\{[\s\S]*?\});/);
         if (!videosMatch) {
-            return "https://error.org/";
+            return null;
         }
 
         const videosJson = JSON.parse(videosMatch[1]);
-        const streams = [];
         
-        const defaultHeaders = {
-            "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36",
-            "Referer": "https://m.animeflv.net/"
-        };
-
+        // Buscar StreamWish primero (SUB)
         if (videosJson.SUB && Array.isArray(videosJson.SUB)) {
-            for (const server of videosJson.SUB) {
-                if (server.code && server.allow_mobile) {
-                    streams.push({
-                        title: "SUB - " + server.title,
-                        streamUrl: server.code,
-                        headers: defaultHeaders
-                    });
-                }
+            const sw = videosJson.SUB.find(s => s.server === "sw");
+            if (sw && sw.code) {
+                console.log("StreamWish SUB: " + sw.code);
+                return sw.code;
+            }
+            // Si no hay StreamWish, usar el primero disponible
+            const first = videosJson.SUB.find(s => s.code && s.allow_mobile);
+            if (first && first.code) {
+                console.log("First SUB: " + first.code);
+                return first.code;
             }
         }
 
+        // Buscar en LAT si no hay SUB
         if (videosJson.LAT && Array.isArray(videosJson.LAT)) {
-            for (const server of videosJson.LAT) {
-                if (server.code && server.allow_mobile) {
-                    streams.push({
-                        title: "LAT - " + server.title,
-                        streamUrl: server.code,
-                        headers: defaultHeaders
-                    });
-                }
+            const sw = videosJson.LAT.find(s => s.server === "sw");
+            if (sw && sw.code) {
+                console.log("StreamWish LAT: " + sw.code);
+                return sw.code;
+            }
+            const first = videosJson.LAT.find(s => s.code && s.allow_mobile);
+            if (first && first.code) {
+                console.log("First LAT: " + first.code);
+                return first.code;
             }
         }
 
-        if (streams.length === 0) {
-            return "https://error.org/";
-        }
-
-        console.log(JSON.stringify({
-            streams: streams,
-            subtitles: ""
-        }));
-        
-        return JSON.stringify({
-            streams: streams,
-            subtitles: ""
-        });
+        console.log("No stream URL found");
+        return null;
 
     } catch (err) {
         console.error(err);
-        return "https://error.org/";
+        return null;
     }
 }
 

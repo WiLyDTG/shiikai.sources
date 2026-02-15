@@ -15,8 +15,7 @@
   "type": "anime",
   "asyncJS": true,
   "softsub": false,
-  "downloadSupport": true,
-  "supportsMojuru": true,
+  "downloadSupport": false,
   "supportsSora": true,
   "supportsLuna": true
 }
