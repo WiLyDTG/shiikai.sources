@@ -5,8 +5,8 @@
     "name": "WiLyD",
     "icon": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ3122kQwublLkZ6rf1fEpUP79BxZOFmH9BSA&s"
   },
-  "version": "9.0.0",
-  "language": "Spanish (SUB/LAT)",
+  "version": "10.0.0",
+  "language": "Spanish",
   "streamType": "HLS",
   "quality": "1080p",
   "baseUrl": "https://m.animeflv.net/",
@@ -14,8 +14,9 @@
   "scriptUrl": "https://raw.githubusercontent.com/WiLyDTG/shiikai.sources/main/sources/animeflv/animeflv.js",
   "type": "anime",
   "asyncJS": true,
-  "softsub": false,
-  "downloadSupport": true,
+  "softsub": true,
+  "downloadSupport": false,
+  "note": "Use external player.",
   "supportsMojuru": true,
   "supportsSora": true,
   "supportsLuna": true
