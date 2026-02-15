@@ -1,4 +1,5 @@
-﻿async function search(query) {
+﻿// AnimeFLV Source v1.1.0
+async function search(query) {
     const results = [];
     try {
         const response = await fetch("https://m.animeflv.net/browse?q=" + encodeURIComponent(query));
