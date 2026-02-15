@@ -46,7 +46,6 @@ async function extractDetails(url) {
         }]);
 
     } catch (err) {
-        console.error(err);
         return JSON.stringify([{
             description: "Error",
             aliases: "Error",
