@@ -5,7 +5,6 @@ async function searchResults(keyword) {
         const response = await fetchv2("https://m.animeflv.net/browse?q=" + encodeURIComponent(keyword));
         const html = await response.text();
 
-        // Buscar todos los <li class="Anime">
         const animeRegex = /<li class="Anime">\s*<a href="([^"]+)">\s*<figure class="Image"><img src="([^"]+)"[^>]*>[\s\S]*?<\/figure>\s*<h2 class="Title">([^<]+)<\/h2>/g;
         let match;
 
@@ -33,30 +32,15 @@ async function extractDetails(url) {
         const response = await fetchv2("https://m.animeflv.net" + url);
         const html = await response.text();
 
-        // Extraer sinopsis
         const synopsisMatch = html.match(/<strong>Sinopsis:<\/strong>\s*([\s\S]*?)<\/p>/);
         const description = synopsisMatch ? decodeHtmlEntities(synopsisMatch[1].trim()) : "N/A";
 
-        // Extraer estado
         const statusMatch = html.match(/<strong>Estado:<\/strong>\s*<strong[^>]*>([^<]+)<\/strong>/);
         const status = statusMatch ? statusMatch[1].trim() : "N/A";
 
-        // Extraer géneros
-        const genresMatch = html.match(/<strong>Generos:<\/strong><\/p>([\s\S]*?)<\/footer>/);
-        let genres = "N/A";
-        if (genresMatch) {
-            const genreTagsMatch = genresMatch[1].match(/<a[^>]*class="Tag"[^>]*>([^<]+)<\/a>/g);
-            if (genreTagsMatch) {
-                genres = genreTagsMatch.map(tag => {
-                    const nameMatch = tag.match(/>([^<]+)</);
-                    return nameMatch ? decodeHtmlEntities(nameMatch[1]) : "";
-                }).filter(g => g).join(", ");
-            }
-        }
-
         return JSON.stringify([{
             description: description,
-            aliases: genres,
+            aliases: "N/A",
             airdate: status
         }]);
 
@@ -76,12 +60,10 @@ async function extractEpisodes(url) {
         const response = await fetchv2("https://m.animeflv.net" + url);
         const html = await response.text();
 
-        // Buscar todos los episodios <li class="Episode"><a href="/ver/...">...</a></li>
         const episodeRegex = /<li class="Episode"><a href="([^"]+)">([^<]+)<\/a><\/li>/g;
         let match;
 
         while ((match = episodeRegex.exec(html)) !== null) {
-            // Extraer número del episodio del título (ej: "Naruto 1" -> 1)
             const titleText = match[2].trim();
             const numberMatch = titleText.match(/(\d+)$/);
             const episodeNumber = numberMatch ? parseInt(numberMatch[1], 10) : results.length + 1;
@@ -104,7 +86,6 @@ async function extractStreamUrl(url) {
         const response = await fetchv2("https://m.animeflv.net" + url);
         const html = await response.text();
 
-        // Buscar var videos = {...};
         const videosMatch = html.match(/var videos\s*=\s*(\{[\s\S]*?\});/);
         if (!videosMatch) {
             return "https://error.org/";
@@ -112,28 +93,31 @@ async function extractStreamUrl(url) {
 
         const videosJson = JSON.parse(videosMatch[1]);
         const streams = [];
+        
+        const defaultHeaders = {
+            "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36",
+            "Referer": "https://m.animeflv.net/"
+        };
 
-        // Procesar servidores SUB (subtitulado)
         if (videosJson.SUB && Array.isArray(videosJson.SUB)) {
             for (const server of videosJson.SUB) {
                 if (server.code && server.allow_mobile) {
                     streams.push({
-                        title: `SUB - ${server.title}`,
+                        title: "SUB - " + server.title,
                         streamUrl: server.code,
-                        server: server.server
+                        headers: defaultHeaders
                     });
                 }
             }
         }
 
-        // Procesar servidores LAT (latino)
         if (videosJson.LAT && Array.isArray(videosJson.LAT)) {
             for (const server of videosJson.LAT) {
                 if (server.code && server.allow_mobile) {
                     streams.push({
-                        title: `LAT - ${server.title}`,
+                        title: "LAT - " + server.title,
                         streamUrl: server.code,
-                        server: server.server
+                        headers: defaultHeaders
                     });
                 }
             }
@@ -143,29 +127,14 @@ async function extractStreamUrl(url) {
             return "https://error.org/";
         }
 
-        // Priorizar StreamWish, YourUpload, Okru
-        const priorityServers = ['sw', 'yu', 'okru', 'stape', 'mega'];
-        const sortedStreams = streams.sort((a, b) => {
-            const aIndex = priorityServers.indexOf(a.server);
-            const bIndex = priorityServers.indexOf(b.server);
-            if (aIndex === -1 && bIndex === -1) return 0;
-            if (aIndex === -1) return 1;
-            if (bIndex === -1) return -1;
-            return aIndex - bIndex;
-        });
-
-        // Retornar el primer stream disponible o la lista completa
-        const finalStreams = sortedStreams.map(s => ({
-            title: s.title,
-            streamUrl: s.streamUrl
+        console.log(JSON.stringify({
+            streams: streams,
+            subtitles: ""
         }));
-
-        if (finalStreams.length === 1) {
-            return finalStreams[0].streamUrl;
-        }
-
+        
         return JSON.stringify({
-            streams: finalStreams
+            streams: streams,
+            subtitles: ""
         });
 
     } catch (err) {
@@ -175,14 +144,16 @@ async function extractStreamUrl(url) {
 }
 
 function decodeHtmlEntities(text) {
-    if (!text) return text;
+    if (!text) {
+        return "";
+    }
     return text
+        .replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec))
+        .replace(/&#x([0-9a-fA-F]+);/g, (match, hex) => String.fromCharCode(parseInt(hex, 16)))
+        .replace(/&quot;/g, '"')
         .replace(/&amp;/g, '&')
         .replace(/&lt;/g, '<')
         .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'")
-        .replace(/&apos;/g, "'")
         .replace(/&nbsp;/g, ' ')
         .replace(/&oacute;/g, 'ó')
         .replace(/&aacute;/g, 'á')
@@ -190,9 +161,5 @@ function decodeHtmlEntities(text) {
         .replace(/&iacute;/g, 'í')
         .replace(/&uacute;/g, 'ú')
         .replace(/&ntilde;/g, 'ñ')
-        .replace(/&Ntilde;/g, 'Ñ')
-        .replace(/&iquest;/g, '¿')
-        .replace(/&iexcl;/g, '¡')
-        .replace(/&uuml;/g, 'ü')
-        .replace(/&Uuml;/g, 'Ü');
+        .replace(/&Ntilde;/g, 'Ñ');
 }
