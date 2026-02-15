@@ -1,17 +1,12 @@
 {
-  "name": "AnimeFLV",
   "sourceName": "AnimeFLV",
-  "compatible": true,
-  "pluginType": "provider",
-  "pluginProvider": "Standard",
-  "contentProvider": "AnimeFLV",
   "iconUrl": "https://www3.animeflv.net/favicon.ico",
   "author": {
     "name": "WiLyD",
     "icon": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ3122kQwublLkZ6rf1fEpUP79BxZOFmH9BSA&s"
   },
   "version": "1.0.0",
-  "language": "Spanish (SUB/LAT)",
+  "language": "Spanish",
   "streamType": "HLS",
   "quality": "1080p",
   "baseUrl": "https://m.animeflv.net/",
@@ -20,7 +15,8 @@
   "type": "anime",
   "asyncJS": true,
   "softsub": true,
-  "downloadSupport": true,
+  "downloadSupport": false,
+  "note": "Use external player.",
   "supportsMojuru": true,
   "supportsSora": true,
   "supportsLuna": true
