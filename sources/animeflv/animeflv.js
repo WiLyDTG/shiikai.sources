@@ -81,32 +81,18 @@ async function fetchSources(episodeId) {
             const allServers = [...(videos.SUB || []), ...(videos.LAT || [])];
             const sources = [];
             
-            // Primero intentar YourUpload con proxy
+            // YourUpload - usar endpoint simplificado
             for (const server of allServers) {
                 if (server.title === "YourUpload" && server.code) {
-                    try {
-                        const yuRes = await fetch(server.code);
-                        const yuHtml = await yuRes.text();
-                        const fileMatch = yuHtml.match(/file\s*:\s*['"]([^'"]+\.mp4[^'"]*)['"]/i);
-                        if (fileMatch && !fileMatch[1].includes("novideo")) {
-                            const proxyUrl = PROXY + "?url=" + encodeURIComponent(fileMatch[1]) + "&referer=" + encodeURIComponent("https://www.yourupload.com/");
-                            sources.push({
-                                label: "YourUpload",
-                                qualities: [{ quality: "720p", url: proxyUrl }]
-                            });
-                        }
-                    } catch (e) {}
-                }
-            }
-            
-            // Agregar embeds como alternativas
-            const embedServers = ["MEGA", "Okru", "Maru", "Stape"];
-            for (const server of allServers) {
-                if (embedServers.includes(server.title) && server.code) {
-                    sources.push({
-                        label: server.title,
-                        qualities: [{ quality: "default", url: server.code }]
-                    });
+                    // Extraer ID del embed URL
+                    const idMatch = server.code.match(/embed\/([^?#]+)/);
+                    if (idMatch) {
+                        const videoUrl = "https://shiikai-sources.pages.dev/yourupload?id=" + idMatch[1];
+                        sources.push({
+                            label: "YourUpload",
+                            qualities: [{ quality: "720p", url: videoUrl }]
+                        });
+                    }
                 }
             }
             
