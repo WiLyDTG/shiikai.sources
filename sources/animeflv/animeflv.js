@@ -81,7 +81,7 @@ async function fetchSources(episodeId) {
             const allServers = [...(videos.SUB || []), ...(videos.LAT || [])];
             const sources = [];
             
-            // YourUpload - usar endpoint simplificado
+            // YourUpload - usar endpoint simplificado y fallback embed
             for (const server of allServers) {
                 if (server.title === "YourUpload" && server.code) {
                     // Extraer ID del embed URL
@@ -89,8 +89,13 @@ async function fetchSources(episodeId) {
                     if (idMatch) {
                         const videoUrl = "https://shiikai-sources.pages.dev/yourupload?id=" + idMatch[1];
                         sources.push({
-                            label: "YourUpload",
+                            label: "YourUpload (MP4)",
                             qualities: [{ quality: "720p", url: videoUrl }]
+                        });
+                        // Fallback: embed
+                        sources.push({
+                            label: "YourUpload (Embed)",
+                            qualities: [{ quality: "default", url: server.code }]
                         });
                     }
                 }
