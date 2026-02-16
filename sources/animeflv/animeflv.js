@@ -81,14 +81,28 @@ async function fetchSources(episodeId) {
             const allServers = [...(videos.SUB || []), ...(videos.LAT || [])];
             const sources = [];
             
-            // Solo enlaces embed
-            const embedServers = ["YourUpload", "MEGA", "Okru", "Maru", "Stape"];
+            // Prefer HLS when possible: if YourUpload embed exists, expose an HLS playlist
+            for (const server of allServers) {
+                if (server.title === "YourUpload" && server.code) {
+                    const idMatch = server.code.match(/embed\/([^?#]+)/);
+                    if (idMatch) {
+                        // HLS endpoint will generate a small playlist pointing to /yourupload?id=ID
+                        const hlsUrl = "https://shiikai-sources.pages.dev/hls?yourupload_id=" + encodeURIComponent(idMatch[1]);
+                        sources.push({
+                            label: "YourUpload (HLS)",
+                            qualities: [{ quality: "720p", url: hlsUrl }]
+                        });
+                        // Also include embed as fallback
+                        sources.push({ label: "YourUpload (Embed)", qualities: [{ quality: "default", url: server.code }] });
+                    }
+                }
+            }
+
+            // Then include other embeds (MEGA, Okru, Maru, Stape)
+            const embedServers = ["MEGA", "Okru", "Maru", "Stape"];
             for (const server of allServers) {
                 if (embedServers.includes(server.title) && server.code) {
-                    sources.push({
-                        label: server.title + " (Embed)",
-                        qualities: [{ quality: "default", url: server.code }]
-                    });
+                    sources.push({ label: server.title + " (Embed)", qualities: [{ quality: "default", url: server.code }] });
                 }
             }
             if (sources.length > 0) {
