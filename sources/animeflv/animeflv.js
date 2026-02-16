@@ -81,26 +81,16 @@ async function fetchSources(episodeId) {
             const allServers = [...(videos.SUB || []), ...(videos.LAT || [])];
             const sources = [];
             
-            // YourUpload - usar endpoint simplificado y fallback embed
+            // Solo enlaces embed
+            const embedServers = ["YourUpload", "MEGA", "Okru", "Maru", "Stape"];
             for (const server of allServers) {
-                if (server.title === "YourUpload" && server.code) {
-                    // Extraer ID del embed URL
-                    const idMatch = server.code.match(/embed\/([^?#]+)/);
-                    if (idMatch) {
-                        const videoUrl = "https://shiikai-sources.pages.dev/yourupload?id=" + idMatch[1];
-                        sources.push({
-                            label: "YourUpload (MP4)",
-                            qualities: [{ quality: "720p", url: videoUrl }]
-                        });
-                        // Fallback: embed
-                        sources.push({
-                            label: "YourUpload (Embed)",
-                            qualities: [{ quality: "default", url: server.code }]
-                        });
-                    }
+                if (embedServers.includes(server.title) && server.code) {
+                    sources.push({
+                        label: server.title + " (Embed)",
+                        qualities: [{ quality: "default", url: server.code }]
+                    });
                 }
             }
-            
             if (sources.length > 0) {
                 return JSON.stringify(sources);
             }
