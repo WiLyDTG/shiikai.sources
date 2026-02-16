@@ -79,31 +79,33 @@ async function fetchSources(episodeId) {
         if (match) {
             const videos = JSON.parse(match[1]);
             const allServers = [...(videos.SUB || []), ...(videos.LAT || [])];
-            const sources = [];
+            const hlsSources = [];
+            const embedSources = [];
 
-            // Include all available servers. For YourUpload, expose an HLS playlist and keep the embed as fallback.
+            // Separate HLS (YourUpload) from embed fallbacks so we can return HLS-first.
             for (const server of allServers) {
                 if (!server || !server.code) continue;
-
                 const title = server.title || "Unknown";
 
                 if (title === "YourUpload") {
                     const idMatch = server.code.match(/embed\/([^?#]+)/);
                     if (idMatch) {
                         const hlsUrl = "https://shiikai-sources.pages.dev/hls?yourupload_id=" + encodeURIComponent(idMatch[1]);
-                        sources.push({ label: "YourUpload (HLS)", qualities: [{ quality: "720p", url: hlsUrl }] });
-                        sources.push({ label: "YourUpload (Embed)", qualities: [{ quality: "default", url: server.code }] });
+                        hlsSources.push({ label: "YourUpload (HLS)", qualities: [{ quality: "720p", url: hlsUrl }] });
+                        // keep embed as fallback
+                        embedSources.push({ label: "YourUpload (Embed)", qualities: [{ quality: "default", url: server.code }] });
                     } else {
-                        sources.push({ label: "YourUpload (Embed)", qualities: [{ quality: "default", url: server.code }] });
+                        embedSources.push({ label: "YourUpload (Embed)", qualities: [{ quality: "default", url: server.code }] });
                     }
                     continue;
                 }
 
                 // Generic embed fallback for any other server
-                sources.push({ label: `${title} (Embed)`, qualities: [{ quality: "default", url: server.code }] });
+                embedSources.push({ label: `${title} (Embed)`, qualities: [{ quality: "default", url: server.code }] });
             }
 
-            if (sources.length > 0) return JSON.stringify(sources);
+            const combined = [...hlsSources, ...embedSources];
+            if (combined.length > 0) return JSON.stringify(combined);
         }
         return JSON.stringify([]);
     } catch (e) {

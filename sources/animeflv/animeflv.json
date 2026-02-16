@@ -10,9 +10,9 @@
     "name": "WiLyD",
     "icon": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ3122kQwublLkZ6rf1fEpUP79BxZOFmH9BSA&s"
   },
-  "version": "32.0.0",
+  "version": "33.0.0",
   "language": "Spanish",
-  "streamType": "MP4",
+  "streamType": "HLS",
   "quality": "720p",
   "baseUrl": "https://www3.animeflv.net/",
   "type": "anime"
